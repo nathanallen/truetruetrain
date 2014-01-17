@@ -26,7 +26,7 @@ end
 def trail_blaze(trail, destination, max, min) #depth first search
   trails = []
   stops = trail.length
-  if stops <= max
+  if stops <= max #### Should this be less than?
     current_stop_hash = TRAIN_HASH[trail[-1]]
     current_stop_hash.keys.each do |stop|
       current_trail = trail.dup << stop
@@ -51,17 +51,18 @@ def length_of_shortest_route(origin, destination)
 end
 
 def shortest_blaze(trail, destination, max, min) #depth first search
+  p trail
   trails = []
   stops = trail.length
-  if stops <= max
+  if stops < max
     current_stop_hash = TRAIN_HASH[trail.first.last]
     current_stop_hash.each_pair do |stop, dist|
       current_trail = trail.first.dup << stop
       distance = trail.last + dist
       current_thing = [current_trail, distance]
-      if stop == destination && stops >= min
+      if stop == destination #&& stops >= min
         trails << current_thing
-      else
+      elsif current_trail.length <= max ## move this
         more_trails = shortest_blaze(current_thing, destination, max, min)
         trails.concat(more_trails)
       end 
