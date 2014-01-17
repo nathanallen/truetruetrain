@@ -71,14 +71,27 @@ def shortest_blaze(trail, destination, max, min) #depth first search
   trails
 end
 
-def number_of_unique_routes(origin, destination, *distance)
+def number_of_unique_routes(origin, destination, distance)
   max = TRAIN_HASH.keys.length
   min = 0
-  trail = [origin]
-  routes = trail_blaze(trail, destination, max, min)
+  outer_distance = distance
+  trail = [[origin], 0]
+  routes = shortest_blaze(trail, destination, max, min)
   # for all combinations of direct routes where x.length + y.length-1 (...) == the_max
   # distance of less than 30...
+  p "******"
   p routes
+  output = []
+  routes.each do |this_route|
+    routes.each do |that_route| 
+      sum = this_route.last + that_route.last
+      if sum < outer_distance
+        trail = this_route.first.slice(0..-2) + that_route.first.slice(1..-1)
+        routes << [trail, sum]
+      end
+    end
+  end
+  p routes.uniq
   routes.uniq.count
 end
 
@@ -127,8 +140,8 @@ load_graph(graph_strings)
 # 8. The length of the shortest route (in terms of distance to travel) from A to C.
 # 9. The length of the shortest route (in terms of distance to travel) from B to B.
 #p "#8: #{length_of_shortest_route('A','C') == 9}"
-p "#9: #{length_of_shortest_route('B','B') == 9}"
+#p "#9: #{length_of_shortest_route('B','B') == 9}"
 
 # 10. The number of different routes from C to C with a distance of less than 30.  In the sample data, the trips are: CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC.
-# p "#10: #{number_of_unique_routes('C','C',29) == 7}"
-# p "CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC"
+p "#10: #{number_of_unique_routes('C','C',30) == 7}"
+p "CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC"
