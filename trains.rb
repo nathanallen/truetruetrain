@@ -7,7 +7,7 @@ def total_distance(*stops)
     next_stop = stops[i+1]
     if next_stop
       route_value = TRAIN_HASH[current_stop][next_stop]
-      return route_value if route_value.is_a? String # ie "NO SUCH ROUTE" errormessage
+      return route_value if route_value.is_a? String # ie "NO SUCH ROUTE" error message
       output += route_value
     end
   end
@@ -15,27 +15,28 @@ def total_distance(*stops)
 end
 
 
-def number_of_trips(origin, destination, *max_min_stops)
-  max = max_min_stops[0] + 1
-  min = max_min_stops[1] || 1
-  trails = trail_blaze([origin], destination, max, min)
+def number_of_trips(origin, destination, *opts)
+  max = opts[0]
+  min = opts[1] || 1
+  trail = [origin]
+  trails = trail_blaze(trail, destination, max, min)
   trails.count
 end
 
 def trail_blaze(trail, destination, max, min) #depth first search
   trails = []
-  current_hash = TRAIN_HASH[trail[-1]]
-  current_hash.keys.each do |stop|
-    trail << stop
-    stops = trail.length # this will always be same for this level of recursion
-    if stops <= max
+  stops = trail.length
+  if stops <= max
+    current_stop_hash = TRAIN_HASH[trail[-1]]
+    current_stop_hash.keys.each do |stop|
+      current_trail = trail.dup << stop
       if stop == destination && stops >= min
-        trails << trail.dup
+        trails << current_trail
       else
-        trails << trail_blaze(trail, destination, max, min).last #fugly
-      end
+        more_trails = trail_blaze(current_trail, destination, max, min)
+        trails.concat(more_trails)
+      end 
     end
-    trail.pop
   end
   trails
 end
@@ -71,7 +72,7 @@ def load_graph(graph_strings)
 end
 
 ## Driver Code
-graph_strings = ['AB5', 'BC4', 'CD8', 'DC8', 'DE6', 'AD5', 'CE2', 'EB3', 'AE7']
+graph_strings = ['AB5', 'BC4', 'CD8', 'DC8', 'DE6', 'AD5', 'CE2', 'EB3', 'AE7']#, 'CZ9', 'ZC9', 'ZD9']
 load_graph(graph_strings)
 
 # 1. The distance of the route A-B-C.
@@ -88,7 +89,7 @@ load_graph(graph_strings)
 # 6. The number of trips starting at C and ending at C with a maximum of 3 stops.  In the sample data below, there are two such trips: C-D-C (2 stops). and C-E-B-C (3 stops).
 # 7. The number of trips starting at A and ending at C with exactly 4 stops.  In the sample data below, there are three such trips: A to C (via B,C,D); A to C (via D,C,D); and A to C (via D,E,B).
 p "#6: #{number_of_trips('C','C',3) == 2}"
-#p "#7: #{number_of_trips('A','C',4,4) == 3}"
+p "#7: #{number_of_trips('A','C',4,4) == 3}"
 
 # # 8. The length of the shortest route (in terms of distance to travel) from A to C.
 # # 9. The length of the shortest route (in terms of distance to travel) from B to B.
