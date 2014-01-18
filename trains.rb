@@ -16,59 +16,83 @@ end
 
 
 def number_of_trips(origin, destination, *opts)
-  max = opts[0] + 1
-  min = (opts[1] || 0) + 1
+  max = opts[0] + 1 # total_stops
+  min = (opts[1] || 0) + 1 #total_stops
   trail = [[origin],0]
-  routes = shortest_blaze(trail, destination, max, min)
+  routes = find_routes(trail, destination, max, min)
   routes.count
 end
 
-def shortest_blaze(trail, destination, max, min) #depth first search
+def find_routes(trail, destination, max, min) #depth first search
   trails = []
-  if trail.length < max #### Should this be less than?
-    current_stop_hash = TRAIN_HASH[trail.first.last]
-    current_stop_hash.each_pair do |stop, dist|
+  #if trail.length < max
+    connections = TRAIN_HASH[trail.first.last]
+    connections.each_pair do |stop, dist|
       current_trail = trail.first.dup << stop
       distance = trail.last + dist
       current_thing = [current_trail, distance]
       if stop == destination && current_trail.length >= min
         trails << current_thing
       elsif current_trail.length < max ## move this
-        more_trails = shortest_blaze(current_thing, destination, max, min)
+        more_trails = find_routes(current_thing, destination, max, min)
         trails += more_trails
       end 
     end
-  end
+  #end
   trails
 end
 
-def length_of_shortest_route(origin, destination)
+def default_find_routes(origin, destination)
   max = TRAIN_HASH.keys.length
   min = 0
   trail = [[origin], 0]
-  routes = shortest_blaze(trail, destination, max, min)
+  routes = find_routes(trail, destination, max, min)
+end
+
+def length_of_shortest_route(origin, destination)
+  routes = default_find_routes(origin, destination)
   routes.sort_by!{|route| route.last}
   routes.first.last
 end
 
-def number_of_unique_routes(origin, destination, distance)
-  max = TRAIN_HASH.keys.length
-  min = 0
-  outer_distance = distance
-  trail = [[origin], 0]
-  routes = shortest_blaze(trail, destination, max, min)
-  output = []
+
+def unique_routes(origin, destination, distance)
+  routes = default_find_routes(origin, destination)
+
+  outer_bound = distance
   routes.each do |this_route|
     routes.each do |that_route|
-      sum = this_route.last + that_route.last
-      if sum < outer_distance
-        trail = this_route.first[0..-2] + that_route.first[1..-1]
-        routes << [trail, sum]
-      end
+      new_route = splice_route(this_route, that_route, outer_bound)
+      routes << new_route unless new_route.nil?
     end
   end
-  routes.uniq.count
+  routes.uniq
 end
+
+def number_of_unique_routes(origin, destination, distance)
+  unique_routes(origin, destination, distance).count
+end
+
+def splice_route(this_route, that_route, outer_bound)
+  sum = this_route.last + that_route.last
+  if sum < outer_bound
+    trail = this_route.first[0..-2] + that_route.first[1..-1]
+    [trail, sum]
+  end
+end
+
+# def routes_by_stop_count()
+# end
+
+# def routes_by_total_distance()
+# end
+
+# def shortest_route()
+# end
+
+# def total_routes()
+# end
+
 
 def update_graph(origin, destination, distance)
   if TRAIN_HASH[origin]
