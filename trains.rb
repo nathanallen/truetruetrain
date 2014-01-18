@@ -37,41 +37,39 @@ class Connections
     routes_between(*args).count
   end
 
-  def routes_between(origin, destination, *max_min)
-    route_search(from(origin), destination, *bounds(*max_min))
+  def routes_between(origin, destination, *opts)
+    starting_point = [origin], 0
+    bounds = set_limits(*opts)
+    route_search(starting_point, destination, *bounds)
   end
 
-  def routes_by_length(origin, destination)
+  def routes_by_distance(origin, destination)
     routes = routes_between(origin, destination)
     routes.sort_by!{|route| route.last}
   end
 
-  def shortest_route_length(*opts)
-    routes_by_length(*opts).first.last
+  def shortest_distance_between(*args)
+    routes_by_distance(*args).first.last
   end
 
-  def route_search_by_limit_distance(origin, destination, distance)
+  def routes_by_limit_distance(origin, destination, distance)
     routes = routes_between(origin, destination)
     find_all_route_combinations(routes, distance)
   end
 
-  def total_unique_routes(origin, destination, distance)
-    route_search_by_limit_distance(origin, destination, distance).count
+  def total_routes_by_limit_distance(origin, destination, distance)
+    routes_by_limit_distance(origin, destination, distance).count
   end
 
   private
 
-  def from(origin)
-    [[origin],0]
-  end
-
-  def bounds(*max_min)
-    case max_min.length
+  def set_limits(*opts)
+    case opts.length
     when 2
-      max = max_min[0] + 1
-      min = max_min[1] + 1
+      max = opts[0] + 1
+      min = opts[1] + 1
     when 1
-      max = max_min[0] + 1
+      max = opts[0] + 1
       min = 0
     when 0
       max = TRAIN_CONNECTIONS.keys.length
@@ -146,11 +144,6 @@ seed_graph = [['A','B',5], ['B','C',4], ['C','D',8], ['D','C',8], ['D','E',6],
 
 c = Connections.new(seed_graph)
 
-# 1. The distance of the route A-B-C.
-# 2. The distance of the route A-D.
-# 3. The distance of the route A-D-C.
-# 4. The distance of the route A-E-B-C-D.
-# 5. The distance of the route A-E-D.
 p "#1: #{c.distance_along_route('A','B','C') == 9}"
 p "#2: #{c.distance_along_route('A','D') == 5}"
 p "#3: #{c.distance_along_route('A','D','C') == 13}"
@@ -165,9 +158,9 @@ p "#7: #{c.total_routes_between('A','C',4,4) == 3}"
 
 # 8. The length of the shortest route (in terms of distance to travel) from A to C.
 # 9. The length of the shortest route (in terms of distance to travel) from B to B.
-p "#8: #{c.shortest_route_length('A','C') == 9}"
-p "#9: #{c.shortest_route_length('B','B') == 9}"
+p "#8: #{c.shortest_distance_between('A','C') == 9}"
+p "#9: #{c.shortest_distance_between('B','B') == 9}"
 
 # 10. The number of different routes from C to C with a distance of less than 30.  In the sample data, the trips are: CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC.
-p "#10: #{c.total_unique_routes('C','C',30) == 7}"
+p "#10: #{c.total_routes_by_limit_distance('C','C',30) == 7}"
 #p "CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC"
