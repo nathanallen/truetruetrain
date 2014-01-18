@@ -1,5 +1,7 @@
 
-TRAIN_ROUTES = Hash.new("NO SUCH ROUTE")
+TRAIN_CONNECTIONS = Hash.new("NO SUCH ROUTE")
+ROUTE_DISTANCES_CACHE = {}
+SPLICE_CACHE = {}
 
 def distance_along_route(*stations)
   distance = 0
@@ -13,7 +15,7 @@ def distance_along_route(*stations)
 end
 
 def distance_between(station, next_station)
-  TRAIN_ROUTES[station][next_station]
+  TRAIN_CONNECTIONS[station][next_station]
 end
 
 def from(origin)
@@ -29,7 +31,7 @@ def bounds(*max_min)
     max = max_min[0] + 1
     min = 0
   when 0
-    max = TRAIN_ROUTES.keys.length
+    max = TRAIN_CONNECTIONS.keys.length
     min = 0
   end
 
@@ -53,17 +55,15 @@ end
 def find_routes(route_data, destination, max, min) #depth first search
   trails = []
   last_stop = route_data.first.last
-  connections = TRAIN_ROUTES[last_stop]
+  connections = TRAIN_CONNECTIONS[last_stop]
   connections.each_pair do |current_stop, current_distance|
     route_so_far = update_route(route_data, current_stop, current_distance)
     stops = route_so_far.first.count
     if current_stop == destination && stops >= min
       trails << route_so_far
     elsif stops < max
-      more_trails = find_routes(route_so_far, destination, max, min)
-      trails += more_trails
+      trails += find_routes(route_so_far, destination, max, min)
     end 
-
   end
   trails
 end
@@ -75,38 +75,56 @@ def length_of_shortest_route(origin, destination)
 end
 
 
-def unique_routes(origin, destination, distance)
+def routes_limit_distance(origin, destination, distance)
   routes = trips(origin, destination)
+  find_all_route_combinations(routes, distance)
+end
 
-  outer_bound = distance
+def number_of_unique_routes(origin, destination, distance)
+  routes_limit_distance(origin, destination, distance).count
+end
+
+def find_all_route_combinations(routes, outer_bound)
   routes.each do |this_route|
     routes.each do |that_route|
-      new_route = splice_route(this_route, that_route, outer_bound)
-      routes << new_route unless new_route.nil?
+      route = quick_splice(this_route, that_route, outer_bound)
+      routes << route unless route.nil?
     end
   end
   routes.uniq
 end
 
-def number_of_unique_routes(origin, destination, distance)
-  unique_routes(origin, destination, distance).count
+def quick_splice(this_route, that_route, outer_bound)
+  r1, r2 = this_route.first, that_route.first
+  cache = SPLICE_CACHE[r1]
+  return cache[r2] if cache && cache[r2]
+
+  output = splice_route(this_route, that_route, outer_bound)
+  cache_splice(output, cache, r2)
+  output || nil
+end
+
+def cache_splice(output, cache, r2)
+  cache ? cache[r2] = output : cache = {[r2] => output}
 end
 
 def splice_route(this_route, that_route, outer_bound)
+  r1, r2 = this_route.first, that_route.first
   sum = this_route.last + that_route.last
   if sum < outer_bound
-    new_trail = this_route.first[0..-2] + that_route.first[1..-1]
-    [new_trail, sum]
+    new_trail = r1[0..-2] + r2[1..-1]
+    output = [new_trail, sum]
   end
 end
 
 def update_graph(origin, destination, distance)
-  if TRAIN_ROUTES[origin] != TRAIN_ROUTES.default
-    TRAIN_ROUTES[origin][destination] = distance.to_i #
+  origin_hash = TRAIN_CONNECTIONS[origin]
+  if origin_hash != TRAIN_CONNECTIONS.default
+    origin_hash[destination] = distance.to_i #
   else
     new_hash = Hash.new("NO SUCH ROUTE")
     new_hash[destination] = distance.to_i #
-    TRAIN_ROUTES[origin] = new_hash
+    origin_hash = new_hash
   end
 end
 
