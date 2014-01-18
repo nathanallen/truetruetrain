@@ -1,25 +1,24 @@
 class Connections
 
-  TRAIN_CONNECTIONS = Hash.new("NO SUCH ROUTE")
-  SPLICE_CACHE = {}
+  LOOKUP = Hash.new("NO SUCH ROUTE")
 
   def initialize(graph)
     graph.each{|route| new_route(*route)}
   end
 
   def new_route(origin, destination, distance)
-    origin_hash = TRAIN_CONNECTIONS[origin]
-    if origin_hash != TRAIN_CONNECTIONS.default
+    origin_hash = LOOKUP[origin]
+    if origin_hash != LOOKUP.default
       origin_hash[destination] = distance.to_i #
     else
       new_hash = Hash.new("NO SUCH ROUTE")
       new_hash[destination] = distance.to_i #
-      TRAIN_CONNECTIONS[origin] = new_hash
+      LOOKUP[origin] = new_hash
     end
   end
 
   def distance_between(station, next_station)
-    TRAIN_CONNECTIONS[station][next_station]
+    LOOKUP[station][next_station]
   end
 
   def distance_along_route(*stations)
@@ -38,23 +37,23 @@ class Connections
   end
 
   def routes_between(origin, destination, *opts)
-    starting_point = [origin], 0
+    seed_route = Route.new(origin)
     bounds = set_limits(*opts)
-    route_search(starting_point, destination, *bounds)
+    route_search(seed_route, destination, *bounds)
   end
 
   def routes_by_distance(origin, destination)
     routes = routes_between(origin, destination)
-    routes.sort_by!{|route| route.last}
+    routes.sort_by!{|route| route.distance}
   end
 
   def shortest_distance_between(*args)
-    routes_by_distance(*args).first.last
+    routes_by_distance(*args).first.distance
   end
 
-  def routes_by_limit_distance(origin, destination, distance)
+  def routes_by_limit_distance(origin, destination, limit)
     routes = routes_between(origin, destination)
-    find_all_route_combinations(routes, distance)
+    find_all_recombinations(routes, limit)
   end
 
   def total_routes_by_limit_distance(origin, destination, distance)
@@ -72,67 +71,76 @@ class Connections
       max = opts[0] + 1
       min = 0
     when 0
-      max = TRAIN_CONNECTIONS.keys.length
+      max = LOOKUP.keys.length
       min = 0
     end
 
     [max, min]
   end
 
-  def update_route(route, stop, dist)
+  def update(route, stop, dist)
     route_so_far = route.first.dup << stop
     distance_so_far = route.last + dist
     [route_so_far, distance_so_far]
   end
 
-  def find_all_route_combinations(routes, outer_bound)
-    routes.each do |this_route|
-      routes.each do |that_route|
-        route = quick_splice(this_route, that_route, outer_bound)
-        routes << route unless route.nil?
+  def find_all_recombinations(routes, limit)
+    routes.each do |left_side|
+      routes.each do |right_side|
+        total_dist = left_side.distance + right_side.distance
+        if total_dist < limit
+          new_trail = splice_route(left_side.stops, right_side.stops)
+          route_already_exists = false
+          routes.each{|route| (route_already_exists = true) if route.stops == new_trail }
+          routes << Route.new(new_trail,total_dist) unless route_already_exists || new_trail.nil? 
+        end
       end
     end
     routes.uniq
   end
 
-  def route_search(route_data, destination, max, min) #depth first search
-    trails = []
-    last_stop = route_data.first.last
-    connections = TRAIN_CONNECTIONS[last_stop]
+  def splice_route(left_trail, right_trail)
+    left_trail + right_trail[1..-1]
+  end
+
+  def route_search(route_obj, final_destination, max, min) #depth first search
+    trails = [] 
+    connections = LOOKUP[route_obj.last_stop]
     connections.each_pair do |current_stop, current_distance|
-      route_so_far = update_route(route_data, current_stop, current_distance)
-      stops = route_so_far.first.count
-      if current_stop == destination && stops >= min
+      
+      new_dist = route_obj.distance + current_distance
+      new_trail = [route_obj.stops, current_stop].flatten
+      route_so_far = Route.new(new_trail, new_dist)
+
+      stops = route_so_far.stops.count
+      if current_stop == final_destination && stops >= min
         trails << route_so_far
       elsif stops < max
-        trails += route_search(route_so_far, destination, max, min)
-      end 
+        trails += route_search(route_so_far, final_destination, max, min)
+      end
     end
     trails
   end
 
-  def quick_splice(this_route, that_route, outer_bound)
-    r1, r2 = this_route.first, that_route.first
-    cache = SPLICE_CACHE[r1]
-    return cache[r2] if cache && cache[r2]
+end
 
-    output = splice_route(this_route, that_route, outer_bound)
-    cache_splice(output, cache, r2)
-    output || nil
+class Route
+  attr_accessor :stops, :distance
+  
+  def initialize(stops, distance=0)
+    @distance = distance
+    @stops = *stops
   end
 
-  def cache_splice(output, cache, r2)
-    cache ? cache[r2] = output : cache = {[r2] => output}
+  def origin
+    stops.first
   end
 
-  def splice_route(this_route, that_route, outer_bound)
-    r1, r2 = this_route.first, that_route.first
-    sum = this_route.last + that_route.last
-    if sum < outer_bound
-      new_trail = r1[0..-2] + r2[1..-1]
-      output = [new_trail, sum]
-    end
+  def destination
+    stops.last
   end
+
+  alias_method :last_stop, :destination
 
 end
 
