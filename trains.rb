@@ -92,16 +92,16 @@ class Connections
         if total_dist < limit
           new_trail = splice_route(left_side.stops, right_side.stops)
           route_already_exists = false
-          routes.each{|route| (route_already_exists = true) if route.stops == new_trail }
-          routes << Route.new(new_trail,total_dist) unless route_already_exists || new_trail.nil? 
+          routes.each{|route| (route_already_exists = true; break) if route.stops == new_trail }
+          routes << Route.new(new_trail,total_dist) unless route_already_exists #|| new_trail.nil? 
         end
       end
     end
     routes.uniq
   end
 
-  def splice_route(left_trail, right_trail)
-    left_trail + right_trail[1..-1]
+  def splice_route(left_stops, right_stops)
+    left_stops + right_stops[1..-1]
   end
 
   def route_search(route, final_destination, max, min) #depth first search
@@ -109,17 +109,23 @@ class Connections
     connections = LOOKUP[route.last_stop]
     connections.each_pair do |current_stop, current_distance|
       route_fork = route.new_fork(current_stop, current_distance)
-      stops = route_fork.stops.count
-      if current_stop == final_destination && stops >= min
-        trails << route_fork
-      elsif stops < max
-        trails += route_search(route_fork, final_destination, max, min)
-      end
+      match = search_result(route_fork, final_destination, max, min)
+      trails << match if match
     end
-    trails
+    trails.flatten
+  end
+
+  def search_result(fork, final_destination, max, min)
+    stops = fork.stops.count      
+    if fork.destination == final_destination && stops >= min
+      fork
+    elsif stops < max
+      route_search(fork, final_destination, max, min)
+    end
   end
 
 end
+
 
 class Route
   attr_accessor :stops, :distance
