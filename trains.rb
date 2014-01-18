@@ -9,10 +9,10 @@ class Connections
   def new_route(origin, destination, distance)
     origin_hash = LOOKUP[origin]
     if origin_hash != LOOKUP.default
-      origin_hash[destination] = distance.to_i #
+      origin_hash[destination] = distance
     else
       new_hash = Hash.new("NO SUCH ROUTE")
-      new_hash[destination] = distance.to_i #
+      new_hash[destination] = distance
       LOOKUP[origin] = new_hash
     end
   end
@@ -25,11 +25,12 @@ class Connections
     distance = 0
     stops = stations.length-1
     stops.times do |i|
-      output = distance_between(*stations[i..i+1])
-      return output if output == "NO SUCH ROUTE"
-      distance += output
+      distance += distance_between(*stations[i..i+1])
     end
     distance
+    
+    rescue TypeError
+      "NO SUCH ROUTE"  
   end
 
   def total_routes_between(*args)
