@@ -103,20 +103,16 @@ class Connections
     left_trail + right_trail[1..-1]
   end
 
-  def route_search(route_obj, final_destination, max, min) #depth first search
+  def route_search(route, final_destination, max, min) #depth first search
     trails = [] 
-    connections = LOOKUP[route_obj.last_stop]
+    connections = LOOKUP[route.last_stop]
     connections.each_pair do |current_stop, current_distance|
-      
-      new_dist = route_obj.distance + current_distance
-      new_trail = [route_obj.stops, current_stop].flatten
-      route_so_far = Route.new(new_trail, new_dist)
-
-      stops = route_so_far.stops.count
+      route_fork = route.new_fork(current_stop, current_distance)
+      stops = route_fork.stops.count
       if current_stop == final_destination && stops >= min
-        trails << route_so_far
+        trails << route_fork
       elsif stops < max
-        trails += route_search(route_so_far, final_destination, max, min)
+        trails += route_search(route_fork, final_destination, max, min)
       end
     end
     trails
@@ -141,6 +137,12 @@ class Route
   end
 
   alias_method :last_stop, :destination
+
+  def new_fork(new_stop, new_distance)
+    fork_stops = [stops, new_stop].flatten
+    fork_distance = distance + new_distance
+    Route.new(fork_stops, fork_distance)
+  end
 
 end
 
