@@ -27,7 +27,7 @@ def bounds(*max_min)
     min = max_min[1] + 1
   when 1
     max = max_min[0] + 1
-    min = 1
+    min = 0
   when 0
     max = TRAIN_ROUTES.keys.length
     min = 0
@@ -44,19 +44,26 @@ def trips(origin, destination, *max_min)
   find_routes(from(origin), destination, *bounds(*max_min))
 end
 
-def find_routes(route, destination, max, min) #depth first search
+def update_route(route, stop, dist)
+  route_so_far = route.first.dup << stop
+  distance_so_far = route.last + dist
+  [route_so_far, distance_so_far]
+end
+
+def find_routes(route_data, destination, max, min) #depth first search
   trails = []
-  connections = TRAIN_ROUTES[route.first.last]
-  connections.each_pair do |stop, dist|
-    trail_so_far = route.first.dup << stop
-    distance_so_far = route.last + dist
-    current_route = [trail_so_far, distance_so_far]
-    if stop == destination && trail_so_far.length >= min
-      trails << current_route
-    elsif trail_so_far.length < max
-      more_trails = find_routes(current_route, destination, max, min)
+  last_stop = route_data.first.last
+  connections = TRAIN_ROUTES[last_stop]
+  connections.each_pair do |current_stop, current_distance|
+    route_so_far = update_route(route_data, current_stop, current_distance)
+    stops = route_so_far.first.count
+    if current_stop == destination && stops >= min
+      trails << route_so_far
+    elsif stops < max
+      more_trails = find_routes(route_so_far, destination, max, min)
       trails += more_trails
     end 
+
   end
   trails
 end
