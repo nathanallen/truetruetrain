@@ -1,34 +1,67 @@
-class RouteFinder
-  
+class Control
   def initialize(graph)
     graph.each{|route| Directory.load(*route)}
   end
+end
 
-  def distance_between(*args)
-    Directory.distance_between(*args)
+class Directory
+
+  def self.lookup
+    @lookup ||= Hash.new("NO SUCH ROUTE")
+  end
+  
+  def self.load(origin, destination, distance)
+    unless lookup[origin] == lookup.default
+      lookup[origin][destination] = distance
+    else
+      new_hash = Hash.new("NO SUCH ROUTE")
+      new_hash[destination] = distance
+      lookup[origin] = new_hash
+    end
   end
 
-  def distance_along_route(*stations)
+  def self.distance_between(station, next_station)
+    lookup[station][next_station]
+  end
+
+  def self.distance_along_route(*stations)
     distance = 0
     stops = stations.length-1
     stops.times do |i|
-      # distance += distance_between(*stations[i..i+1])
       distance += distance_between(*stations[i..i+1])
     end
     distance
     
     rescue TypeError
-      "NO SUCH ROUTE"  
+      "NO SUCH ROUTE" 
+  end
+
+  def self.number_of_stations
+    lookup.count
+  end
+
+  def self.connections_from(stop)
+    lookup[stop].keys
+  end
+
+end
+
+
+class DirectorySearch
+  
+  def distance_between(*args) #
+    Directory.distance_between(*args)
   end
 
   def total_routes_between(*args)
     routes_between(*args).count
   end
 
+  def distance_along_route(*stations) #
+    Directory.distance_along_route(*stations) 
+  end
+
   def routes_between(origin, destination, *opts)
-    # seed_route = Route.new(origin)
-    # bounds = set_search_limits(*opts)
-    # SearchHelper.route_search(seed_route, destination, *bounds)
     SearchHelper.route_search(origin, destination, *opts)
   end
 
@@ -56,39 +89,30 @@ class SearchHelper
 
   def self.route_search(origin, destination, *opts)
     seed_route = Route.new(origin)
-    bounds = self.set_limits(*opts)
-    self.find_routes(seed_route, destination, *bounds)
+    bounds = set_limits(*opts)
+    find_routes(seed_route, destination, *bounds)
   end
 
   def self.find_routes(route, final_destination, max, min) #depth first search
     trails = [] 
-    route.connections.each_pair do |current_stop, current_distance|
-      new_fork = route.new_fork(current_stop, current_distance)
-      #new_fork = Route.fork(route, current_stop, current_distance)
-      match = self.evaluate(new_fork, final_destination, max, min)
+    route.connections.each do |next_stop|
+      new_fork = route.new_fork!(next_stop)
+      match = evaluate(new_fork, final_destination, max, min)
       trails << match if match
     end
     trails.flatten
-  end
-
-  def self.evaluate(fork, final_destination, max, min)
-    stops = fork.stops.count      
-    if fork.destination == final_destination && stops >= min
-      fork
-    elsif stops < max
-      self.find_routes(fork, final_destination, max, min)
-    end
   end
 
   def self.find_all_recombinations(routes, limit)
     routes.each do |left_side|
       routes.each do |right_side|
         total_dist = left_side.distance + right_side.distance
+        #unique_routes = []
         if total_dist < limit
-          new_trail = self.splice_route(left_side.stops, right_side.stops)
+          new_route = Route.new_splice(left_side, right_side)
           route_already_exists = false
-          routes.each{|route| (route_already_exists = true; break) if route.stops == new_trail }
-          routes << Route.new(new_trail,total_dist) unless route_already_exists #|| new_trail.nil? 
+          routes.each{|route| (route_already_exists = true; break) if route.stops == new_route.stops }
+          routes << new_route unless route_already_exists #|| new_route.nil? 
         end
       end
     end
@@ -97,8 +121,13 @@ class SearchHelper
 
   private
 
-  def self.splice_route(left_stops, right_stops)
-    left_stops + right_stops[1..-1]
+  def self.evaluate(route, final_destination, max, min)
+    stops = route.stops.count      
+    if route.destination == final_destination && stops >= min
+      route
+    elsif stops < max
+      find_routes(route, final_destination, max, min)
+    end
   end
 
   def self.set_limits(*opts)
@@ -118,41 +147,6 @@ class SearchHelper
   end
 
 end
-
-
-
-class Directory
-
-  def self.lookup
-    @lookup ||= Hash.new("NO SUCH ROUTE")
-  end
-  
-  def self.load(origin, destination, distance)
-    unless lookup[origin] == lookup.default
-      lookup[origin][destination] = distance
-    else
-      new_hash = Hash.new("NO SUCH ROUTE")
-      new_hash[destination] = distance
-      lookup[origin] = new_hash
-    end
-  end
-
-  def self.distance_between(station, next_station)
-    lookup[station][next_station]
-  end
-
-  def self.number_of_stations
-    lookup.count
-  end
-
-  def self.connections_from(stop)
-    lookup[stop]
-  end
-
-end
-
-
-
 
 class Route
   attr_accessor :stops, :distance
@@ -176,14 +170,27 @@ class Route
 
   alias_method :last_stop, :destination
 
-  def new_fork(new_stop, new_distance)
-    self.class.fork(self, new_stop, new_distance)
+  def new_fork!(next_stop)
+    self.class.new_fork(self, next_stop)
   end
 
-  def self.fork(route, next_stop, next_distance)
+  def self.new_fork(route, next_stop)
     new_stops = *route.stops, next_stop
+    next_distance = Directory.distance_between(route.last_stop, next_stop)
     new_distance = route.distance + next_distance
     self.new(new_stops, new_distance)
+  end
+
+  def self.new_splice(left_route, right_route) #check for valid route?
+    new_stops = splice_together(left_route.stops, right_route.stops)
+    new_distance = left_route.distance + right_route.distance
+    self.new(new_stops, new_distance)
+  end
+
+  private
+
+  def self.splice_together(left_stops, right_stops)
+    left_stops + right_stops[1..-1]
   end
 
 end
@@ -194,7 +201,8 @@ end
 seed_graph = [['A','B',5], ['B','C',4], ['C','D',8], ['D','C',8], ['D','E',6], 
                 ['A','D',5], ['C','E',2], ['E','B',3], ['A','E',7]]
 
-c = RouteFinder.new(seed_graph)
+Control.new(seed_graph)
+c = DirectorySearch.new
 
 p "#1: #{c.distance_along_route('A','B','C') == 9}"
 p "#2: #{c.distance_along_route('A','D') == 5}"
