@@ -1,12 +1,12 @@
 require 'set'
 
-class Control
-  def initialize(graph)
-    graph.each{|route| Directory.load(*route)}
-  end
-end
+class DirectoryModel
 
-class Directory
+  def initialize(graph)
+    graph.each do |route|
+      DirectoryModel.load(route[0], route[1], route[2].to_i) #
+    end
+  end
 
   def self.lookup
     @lookup ||= Hash.new("NO SUCH ROUTE")
@@ -49,10 +49,10 @@ class Directory
 end
 
 
-class DirectorySearch
+class DirectorySearchHelper
   
   def distance_between(*args) #
-    Directory.distance_between(*args)
+    DirectoryModel.distance_between(*args)
   end
 
   def total_routes_between(*args)
@@ -60,11 +60,11 @@ class DirectorySearch
   end
 
   def distance_along_route(*stations) #
-    Directory.distance_along_route(*stations) 
+    DirectoryModel.distance_along_route(*stations) 
   end
 
   def routes_between(origin, destination, *opts)
-    SearchHelper.route_search(origin, destination, *opts)
+    find_routes(origin, destination, *opts)
   end
 
   def routes_by_distance(origin, destination)
@@ -78,31 +78,38 @@ class DirectorySearch
 
   def routes_by_limit_distance(origin, destination, limit)
     routes = routes_between(origin, destination)
-    SearchHelper.find_all_recombinations(routes, limit)
+    find_all_recombinations(routes, limit)
   end
 
   def total_routes_by_limit_distance(origin, destination, distance)
     routes_by_limit_distance(origin, destination, distance).count
   end
 
-end
+  private
 
-class SearchHelper
-
-  def self.route_search(origin, destination, *opts)
+  def find_routes(origin, destination, *opts)
     seed_route = Route.new(origin)
     bounds = set_limits(*opts)
-    find_routes(seed_route, destination, *bounds)
+    depth_first_search(seed_route, destination, *bounds)
   end
 
-  def self.find_routes(route, final_destination, max, min) #depth first search
+  def depth_first_search(route, final_destination, max, min)
     route.connections.map do |next_stop|
       new_fork = route.new_fork!(next_stop)
-      evaluate(new_fork, final_destination, max, min)
+      evaluate_route(new_fork, final_destination, max, min)
     end.flatten.compact
   end
 
-  def self.find_all_recombinations(routes, limit)
+  def evaluate_route(route, final_destination, max, min)
+    stops = route.stops.count      
+    if route.destination == final_destination && stops >= min
+      route
+    elsif stops < max
+      depth_first_search(route, final_destination, max, min)
+    end
+  end
+
+  def find_all_recombinations(routes, limit)
     unique_routes = Set.new(routes.map{|route| route.stops})
     routes.each do |left_side|
       routes.each do |right_side|
@@ -112,9 +119,7 @@ class SearchHelper
     end
   end
 
-  private
-
-  def self.evaluate_combo(left_side, right_side, limit, unique_routes)
+  def evaluate_combo(left_side, right_side, limit, unique_routes)
     total_dist = left_side.distance + right_side.distance
     if total_dist < limit
       new_route = Route.new_splice(left_side, right_side)
@@ -122,16 +127,7 @@ class SearchHelper
     end
   end
 
-  def self.evaluate(route, final_destination, max, min)
-    stops = route.stops.count      
-    if route.destination == final_destination && stops >= min
-      route
-    elsif stops < max
-      find_routes(route, final_destination, max, min)
-    end
-  end
-
-  def self.set_limits(*opts)
+  def set_limits(*opts)
     case opts.length
     when 2
       max = opts[0] + 1
@@ -140,7 +136,7 @@ class SearchHelper
       max = opts[0] + 1
       min = 0
     when 0
-      max = Directory.number_of_stations + 1
+      max = DirectoryModel.number_of_stations + 1
       min = 0
     end
 
@@ -166,7 +162,7 @@ class Route
   end
 
   def connections #connecting_stations
-    Directory.connections_from(last_stop)
+    DirectoryModel.connections_from(last_stop)
   end
 
   alias_method :last_stop, :destination
@@ -177,7 +173,7 @@ class Route
 
   def self.new_fork(route, next_stop)
     new_stops = *route.stops, next_stop
-    next_distance = Directory.distance_between(route.last_stop, next_stop)
+    next_distance = DirectoryModel.distance_between(route.last_stop, next_stop)
     new_distance = route.distance + next_distance
     self.new(new_stops, new_distance)
   end
@@ -197,13 +193,12 @@ class Route
 end
 
 
-
 ## Driver Code
-seed_graph = [['A','B',5], ['B','C',4], ['C','D',8], ['D','C',8], ['D','E',6], 
-                ['A','D',5], ['C','E',2], ['E','B',3], ['A','E',7]]
+test_file = ARGV[0] || 'test_input.txt'
+test_input = File.read(test_file).split(', ')
 
-Control.new(seed_graph)
-c = DirectorySearch.new
+DirectoryModel.new(test_input)
+c = DirectorySearchHelper.new
 
 p "#1: #{c.distance_along_route('A','B','C') == 9}"
 p "#2: #{c.distance_along_route('A','D') == 5}"
