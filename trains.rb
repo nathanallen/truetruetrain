@@ -96,13 +96,10 @@ class SearchHelper
   end
 
   def self.find_routes(route, final_destination, max, min) #depth first search
-    trails = [] 
-    route.connections.each do |next_stop|
+    route.connections.map do |next_stop|
       new_fork = route.new_fork!(next_stop)
-      match = evaluate(new_fork, final_destination, max, min)
-      trails << match if match
-    end
-    trails.flatten
+      evaluate(new_fork, final_destination, max, min)
+    end.flatten.compact
   end
 
   def self.find_all_recombinations(routes, limit)
