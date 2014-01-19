@@ -1,3 +1,5 @@
+require 'set'
+
 class Control
   def initialize(graph)
     graph.each{|route| Directory.load(*route)}
@@ -104,22 +106,24 @@ class SearchHelper
   end
 
   def self.find_all_recombinations(routes, limit)
+    unique_routes = Set.new(routes.map{|route| route.stops})
     routes.each do |left_side|
       routes.each do |right_side|
-        total_dist = left_side.distance + right_side.distance
-        #unique_routes = []
-        if total_dist < limit
-          new_route = Route.new_splice(left_side, right_side)
-          route_already_exists = false
-          routes.each{|route| (route_already_exists = true; break) if route.stops == new_route.stops }
-          routes << new_route unless route_already_exists #|| new_route.nil? 
-        end
+        combo_route = evaluate_combo(left_side, right_side, limit, unique_routes)
+        routes << combo_route if combo_route
       end
     end
-    routes.uniq
   end
 
   private
+
+  def self.evaluate_combo(left_side, right_side, limit, unique_routes)
+    total_dist = left_side.distance + right_side.distance
+    if total_dist < limit
+      new_route = Route.new_splice(left_side, right_side)
+      new_route if unique_routes.add?(new_route.stops)
+    end
+  end
 
   def self.evaluate(route, final_destination, max, min)
     stops = route.stops.count      
