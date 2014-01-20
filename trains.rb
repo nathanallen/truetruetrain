@@ -21,7 +21,9 @@ class DirectoryModel
   end
 
   def self.distance_between(station, next_station)
-    lookup[station][next_station]
+    lookup[station][next_station].distance
+    rescue
+      "NO SUCH ROUTE" 
   end
 
   def self.distance_along_route(*stations)
@@ -143,12 +145,23 @@ class DirectorySearchHelper
 
 end
 
+class Connection
+  attr_reader :origin, :destination, :distance
+
+  def initialize(origin, destination, distance)
+    @origin = origin
+    @destination = destination
+    @distance = distance
+  end
+
+end
+
 class Station
-  attr_accessor :connections
+  attr_accessor :connections, :station
 
   def initialize(station, *connection)
     @station = station
-    @connections = {connection[0] => connection[1]} || {}
+    @connections = {connection[0] => new_connection(*connection)} || {}
   end
 
   def [](station)
@@ -156,7 +169,11 @@ class Station
   end
 
   def []=(station, distance)
-    connections[station] = distance
+    connections[station] = new_connection(station, distance)
+  end
+
+  def new_connection(destination, distance)
+    Connection.new(self.station, destination, distance)
   end
 
 end
