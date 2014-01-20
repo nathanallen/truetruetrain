@@ -24,7 +24,7 @@ class Main
 
 end
 
-class Search
+class SearchController < Main
 
   def routes_between(origin, destination, *opts)
     origin_station = Station.find(origin)
@@ -122,9 +122,9 @@ class Search
   end
 
   def set_limits(*opts)
-    max = opts[0] || Station.all.count + 1
-    min = opts[1] || 0
-    [max, min]
+    max_stops = opts[0] || Station.all.count + 1
+    min_stops = opts[1] || 0
+    [max_stops, min_stops]
   end
 
 end
@@ -154,8 +154,8 @@ class Station
     @@stations
   end
 
-  def add_connection(connection)
-    connections_hash[connection.destination] = connection
+  def add_connection(new_connection)
+    connections_hash[new_connection.destination] = new_connection
   end
 
   def distance_to(station_name)
@@ -172,13 +172,13 @@ class Station
 
   private
 
-  def update_records(connections)
-    add_connections(connections)
+  def update_records(new_connections)
+    add_connections(new_connections)
     add_station
   end
 
-  def add_connections(connections)
-    connections.each{|c| add_connection(c)}
+  def add_connections(new_connections)
+    new_connections.each{|c| add_connection(c)}
   end
 
   def add_station
@@ -240,8 +240,7 @@ end
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
 test_input = File.read(test_file).split(', ')
-Main.new(test_input)
-s = Search.new
+s = SearchController.new(test_input)
 
 ## Sanity Check
 p "#1: #{s.distance_along_route('A','B','C') == 9}"
