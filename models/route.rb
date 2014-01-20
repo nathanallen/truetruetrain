@@ -32,7 +32,7 @@ class Route
   end
 
   def self.new_fork(route, next_connections)
-    new_connections = [route.connections, next_connections].flatten
+    new_connections = *route.connections, *next_connections
     self.new(new_connections)
   end
 
