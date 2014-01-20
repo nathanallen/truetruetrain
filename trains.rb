@@ -60,15 +60,17 @@ class DirectorySearchHelper
     routes_between(*args).count
   end
 
-  def distance_along_route(*stations) #
-    DirectoryModel.distance_along_route(*stations) 
+  def distance_along_route(*stops) #
+    DirectoryModel.distance_along_route(*stops) 
   end
 
   def routes_between(origin, destination, *opts)
+    origin = DirectoryModel.lookup[origin]
     find_routes(origin, destination, *opts)
   end
 
   def routes_by_distance(origin, destination)
+    #origin = DirectoryModel.lookup[origin] #
     routes = routes_between(origin, destination)
     routes.sort_by!{|route| route.distance}
   end
@@ -78,11 +80,13 @@ class DirectorySearchHelper
   end
 
   def routes_by_limit_distance(origin, destination, limit)
+    #origin = DirectoryModel.lookup[origin] #
     routes = routes_between(origin, destination)
     find_all_recombinations(routes, limit)
   end
 
   def total_routes_by_limit_distance(origin, destination, distance)
+    #origin = DirectoryModel.lookup[origin] #
     routes_by_limit_distance(origin, destination, distance).count
   end
 
@@ -95,15 +99,16 @@ class DirectorySearchHelper
   end
 
   def depth_first_search(route, final_destination, max, min)
-    route.connections.map do |next_stop|
-      new_fork = route.new_fork!(next_stop)
+    #p route
+    route.future_connections.values.map do |next_connection|
+      new_fork = route.new_fork!(next_connection)
       evaluate_route(new_fork, final_destination, max, min)
     end.flatten.compact
   end
 
   def evaluate_route(route, final_destination, max, min)
-    stops = route.stops.count      
-    if route.destination == final_destination && stops >= min
+    stops = route.stops    
+    if route.destination == final_destination && stops >= min #
       route
     elsif stops < max
       depth_first_search(route, final_destination, max, min)
@@ -111,20 +116,22 @@ class DirectorySearchHelper
   end
 
   def find_all_recombinations(routes, limit)
-    unique_routes = Set.new(routes.map{|route| route.stops})
+    unique_routes = Set.new(routes.map{|route| route.connections})
     routes.each do |left_side|
       routes.each do |right_side|
         combo_route = evaluate_combo(left_side, right_side, limit, unique_routes)
         routes << combo_route if combo_route
       end
     end
+    #p unique_routes
   end
 
   def evaluate_combo(left_side, right_side, limit, unique_routes)
     total_dist = left_side.distance + right_side.distance
     if total_dist < limit
       new_route = Route.new_splice(left_side, right_side)
-      new_route if unique_routes.add?(new_route.stops)
+      #p new_route.connections
+      new_route if unique_routes.add?(new_route.connections)
     end
   end
 
@@ -181,48 +188,48 @@ class Station
 end
 
 class Route
-  attr_accessor :stops, :distance
+  attr_accessor :distance, :connections, :last_station
 
-  def initialize(stops, distance=0)
+  def initialize(station, distance=0, *connections)
     @distance = distance
-    @stops = *stops
+    @connections = connections.flatten
+    @last_station = station
   end
 
-  def origin
-    stops.first
-  end
+  # def origin
+  #   stations.first
+  # end
 
   def destination
-    stops.last
+    connections.last.destination
   end
 
-  def connections #connecting_stations
-    DirectoryModel.connections_from(last_stop)
+  alias_method :final_station, :destination
+
+  def stops
+    @connections.count + 1
   end
 
-  alias_method :last_stop, :destination
-
-  def new_fork!(next_stop)
-    self.class.new_fork(self, next_stop)
+  def future_connections #connecting_stations
+    last_station.connections
   end
 
-  def self.new_fork(route, next_stop)
-    new_stops = *route.stops, next_stop
-    next_distance = DirectoryModel.distance_between(route.last_stop, next_stop)
-    new_distance = route.distance + next_distance
-    self.new(new_stops, new_distance)
+  def new_fork!(next_connection)
+    self.class.new_fork(self, next_connection)
+  end
+
+  def self.new_fork(route, next_connection)
+    final_station = DirectoryModel.lookup[next_connection.destination]
+    new_distance = route.distance + next_connection.distance
+    new_connections = route.connections, next_connection
+    self.new(final_station, new_distance, new_connections)
   end
 
   def self.new_splice(left_route, right_route) #check for valid route?
-    new_stops = splice_together(left_route.stops, right_route.stops)
+    final_station = DirectoryModel.lookup[right_route.destination]
     new_distance = left_route.distance + right_route.distance
-    self.new(new_stops, new_distance)
-  end
-
-  private
-
-  def self.splice_together(left_stops, right_stops)
-    left_stops + right_stops[1..-1]
+    new_connections = left_route.connections, right_route.connections[1..-1]
+    self.new(final_station, new_distance, new_connections)
   end
 
 end
