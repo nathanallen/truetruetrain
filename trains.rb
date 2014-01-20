@@ -179,24 +179,22 @@ end
 class Route
   attr_accessor :distance, :connections, :last_station
 
-  def initialize(station, distance=0, *connections)
+  def initialize(terminal_station, distance=0, *connections)
     @distance = distance
     @connections = connections.flatten
-    @last_station = station
+    @last_station = terminal_station
   end
 
-  # def origin
-  #   stations.first
-  # end
+  def origin
+    connections.first ? connections.first.origin : last_station.station
+  end
 
   def destination
-    connections.last.destination
+    connections.last ? connections.last.destination : last_station.station
   end
 
-  alias_method :final_station, :destination
-
   def stops
-    @connections.count + 1
+    @connections.count
   end
 
   def future_connections #connecting_stations
