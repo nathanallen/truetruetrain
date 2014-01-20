@@ -51,26 +51,17 @@ end
 
 
 class DirectorySearchHelper
-  
-  def distance_between(*args) #
-    DirectoryModel.distance_between(*args)
+
+  def routes_between(origin, destination, *opts)
+    origin_station = DirectoryModel.lookup[origin]
+    find_routes(origin_station, destination, *opts)
   end
 
   def total_routes_between(*args)
     routes_between(*args).count
   end
-
-  def distance_along_route(*stops) #
-    DirectoryModel.distance_along_route(*stops) 
-  end
-
-  def routes_between(origin, destination, *opts)
-    origin = DirectoryModel.lookup[origin]
-    find_routes(origin, destination, *opts)
-  end
-
+  
   def routes_by_distance(origin, destination)
-    #origin = DirectoryModel.lookup[origin] #
     routes = routes_between(origin, destination)
     routes.sort_by!{|route| route.distance}
   end
@@ -80,14 +71,20 @@ class DirectorySearchHelper
   end
 
   def routes_by_limit_distance(origin, destination, limit)
-    #origin = DirectoryModel.lookup[origin] #
     routes = routes_between(origin, destination)
     find_all_recombinations(routes, limit)
   end
 
   def total_routes_by_limit_distance(origin, destination, distance)
-    #origin = DirectoryModel.lookup[origin] #
     routes_by_limit_distance(origin, destination, distance).count
+  end
+
+  def distance_between(*args) #
+    DirectoryModel.distance_between(*args)
+  end
+
+  def distance_along_route(*stops) #
+    DirectoryModel.distance_along_route(*stops) 
   end
 
   private
@@ -122,14 +119,12 @@ class DirectorySearchHelper
         routes << combo_route if combo_route
       end
     end
-    #p unique_routes
   end
 
   def evaluate_combo(left_side, right_side, limit, unique_routes)
     total_dist = left_side.distance + right_side.distance
     if total_dist < limit
       new_route = Route.new_splice(left_side, right_side)
-      #p new_route.connections
       new_route if unique_routes.add?(new_route.connections)
     end
   end
