@@ -4,19 +4,22 @@ require 'set'
 
 class DirectoryControl
 
-  @@stations = {}
+  @@directory = {}
 
   def initialize(graph_strings)
     load_graph(graph_strings)
   end
   
   def update_directory(origin_name, destination_name, distance)
-    connection = Connection.new(origin_name, destination_name, distance)
-    station = @@stations[origin_name]
-    if station
-      station.add_connection(connection)
+    new_connection = Connection.new(origin_name, destination_name, distance)
+    if @@directory[origin_name]
+      @@directory[origin_name][:station].add_connection(new_connection)
+      new_connection_record = {destination_name => new_connection}
+      @@directory[origin_name][:connections] = new_connection_record
     else
-      @@stations[origin_name] = Station.new(origin_name, connection)
+      new_station = Station.new(origin_name, new_connection)
+      new_station_record = {station => new_station}
+      @@directory[origin_name] = new_station_record
     end
   end
 
@@ -33,7 +36,7 @@ end
 class DirectorySearch < DirectoryControl
 
   def lookup(station_name)
-    @@stations[station_name]
+    @@directory[station_name][:station]
   end
 
   def connections_from(station_name)
@@ -86,7 +89,7 @@ class DirectorySearch < DirectoryControl
   end
 
   def number_of_stations 
-    @@stations.count
+    @@directory.count
   end
 
   private
