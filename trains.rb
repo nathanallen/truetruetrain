@@ -122,18 +122,18 @@ class DirectorySearch < DirectoryControl
 
   def find_all_recombinations(routes, limit)
     unique_routes = Set.new(routes.map{|route| route.connections})
-    routes.each do |left_side|
-      routes.each do |right_side|
-        combo_route = evaluate_combo(left_side, right_side, limit, unique_routes)
+    routes.each do |left_route|
+      routes.each do |right_route|
+        combo_route = evaluate_combo(left_route, right_route, limit, unique_routes)
         routes << combo_route if combo_route
       end
     end
   end
 
-  def evaluate_combo(left_side, right_side, limit, unique_routes)
-    total_dist = left_side.distance + right_side.distance
+  def evaluate_combo(left_route, right_route, limit, unique_routes)
+    total_dist = left_route.distance + right_route.distance
     if total_dist < limit
-      new_route = left_side.new_fork!(right_side.connections)
+      new_route = left_route.new_fork!(right_route.connections)
       new_route if unique_routes.add?(new_route.connections)
     end
   end
