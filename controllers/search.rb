@@ -36,8 +36,7 @@ class SearchController < Main
 
   def distance_along_route(*station_names)
     distance = 0
-    stops = station_names.length-1
-    stops.times do |i|
+    for i in (0..station_names.length-2)
       distance += distance_between(*station_names[i..i+1])
     end
     distance
