@@ -2,45 +2,32 @@ require 'set'
 
 ## Controller
 
-class DirectoryControl
-
-  @@stations = {}
+class Main
 
   def initialize(graph_strings)
     load_graph(graph_strings)
   end
   
-  def update_directory(origin_name, destination_name, distance)
+  def build_stations(origin_name, destination_name, distance)
     new_connection = Connection.new(origin_name, destination_name, distance)
-    if @@stations[origin_name]
-      @@stations[origin_name].add_connection(new_connection)
-    else
-      @@stations[origin_name] = Station.new(origin_name, new_connection)
-    end
+    station = Station.find(origin_name)
+    station ? station.add_connection(new_connection) : Station.new(origin_name, new_connection)
   end
 
   private
 
   def load_graph(graph_strings)
     graph_strings.each do |route_string|
-      update_directory(route_string[0], route_string[1], route_string[2].to_i)
+      build_stations(route_string[0], route_string[1], route_string[2].to_i)
     end
   end
 
 end
 
-class DirectorySearch < DirectoryControl
-
-  def lookup(station_name)
-    @@stations[station_name]
-  end
-
-  def connections_from(station_name)
-    lookup(station_name).connections
-  end
+class Search
 
   def routes_between(origin, destination, *opts)
-    origin_station = lookup(origin)
+    origin_station = Station.find(origin)
     find_routes(origin_station, destination, *opts)
   end
 
@@ -67,7 +54,7 @@ class DirectorySearch < DirectoryControl
   end
 
   def distance_between(station_name, next_station_name)
-    lookup(station_name).distance_to(next_station_name)
+    Station.find(station_name).distance_to(next_station_name)
     rescue
       "NO SUCH ROUTE" 
   end
@@ -82,10 +69,6 @@ class DirectorySearch < DirectoryControl
     
     rescue TypeError
       "NO SUCH ROUTE" 
-  end
-
-  def number_of_stations 
-    @@stations.count
   end
 
   private
@@ -104,7 +87,7 @@ class DirectorySearch < DirectoryControl
   end
 
   def depth_first_search(route, final_destination, *limits)
-    connections = connections_from(route.terminus)
+    connections = Station.connections_from(route.terminus)
     connections.map do |next_connection|
       new_fork = route.new_fork!(next_connection)
       evaluate_result(new_fork, final_destination, *limits)
@@ -139,42 +122,67 @@ class DirectorySearch < DirectoryControl
   end
 
   def set_limits(*opts)
-    max = opts[0] || number_of_stations + 1
+    max = opts[0] || Station.all.count + 1
     min = opts[1] || 0
     [max, min]
   end
 
 end
 
-## Model
+## Models
 
 class Station
-  attr_reader :connection_hash, :station_name
+  attr_reader :connections_hash, :station_name
+
+  @@stations = {}
 
   def initialize(name, *connections)
     @station_name = name
-    @connection_hash = {}
+    @connections_hash = {}
+    update_records(connections)
+  end
+
+  def self.find(station_name)
+    @@stations[station_name]
+  end
+
+  def self.connections_from(station_name)
+    find(station_name).connections
+  end
+
+  def self.all
+    @@stations
+  end
+
+  def add_connection(connection)
+    connections_hash[connection.destination] = connection
+  end
+
+  def distance_to(station_name)
+    connections_hash[station_name].distance
+  end
+
+  def connection_names
+    connections_hash.keys
+  end
+
+  def connections
+    connections_hash.values
+  end
+
+  private
+
+  def update_records(connections)
     add_connections(connections)
+    add_station
   end
 
   def add_connections(connections)
     connections.each{|c| add_connection(c)}
   end
 
-  def add_connection(connection)
-    connection_hash[connection.destination] = connection
-  end
-
-  def distance_to(station_name)
-    connection_hash[station_name].distance
-  end
-
-  def connection_names
-    connection_hash.keys
-  end
-
-  def connections
-    connection_hash.values
+  def add_station
+    @@stations[self.station_name] = self
   end
 
 end
@@ -193,9 +201,9 @@ end
 class Route
   attr_reader :distance, :connections
 
-  def initialize(*connections)
-    @connections = connections.flatten
-    @distance ||= total_distance
+  def initialize(connections)
+    @connections = *connections
+    @distance = total_distance 
   end
 
   def origin
@@ -209,7 +217,7 @@ class Route
   alias_method :terminus, :destination
 
   def stops
-    @connections.count
+    connections.count
   end
 
   def new_fork!(next_connections)
@@ -217,7 +225,7 @@ class Route
   end
 
   def self.new_fork(route, next_connections)
-    new_connections = route.connections, next_connections
+    new_connections = [route.connections, next_connections].flatten
     self.new(new_connections)
   end
 
@@ -232,16 +240,17 @@ end
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
 test_input = File.read(test_file).split(', ')
-d = DirectorySearch.new(test_input)
+Main.new(test_input)
+s = Search.new
 
 ## Sanity Check
-p "#1: #{d.distance_along_route('A','B','C') == 9}"
-p "#2: #{d.distance_along_route('A','D') == 5}"
-p "#3: #{d.distance_along_route('A','D','C') == 13}"
-p "#4: #{d.distance_along_route('A','E','B','C','D') == 22}"
-p "#5: #{d.distance_along_route('A','E','D') == 'NO SUCH ROUTE'}"
-p "#6: #{d.total_routes_between('C','C',3) == 2}"
-p "#7: #{d.total_routes_between('A','C',4,4) == 3}"
-p "#8: #{d.shortest_distance_between('A','C') == 9}"
-p "#9: #{d.shortest_distance_between('B','B') == 9}"
-p "#10: #{d.total_routes_by_limit_distance('C','C',30) == 7}"
+p "#1: #{s.distance_along_route('A','B','C') == 9}"
+p "#2: #{s.distance_along_route('A','D') == 5}"
+p "#3: #{s.distance_along_route('A','D','C') == 13}"
+p "#4: #{s.distance_along_route('A','E','B','C','D') == 22}"
+p "#5: #{s.distance_along_route('A','E','D') == 'NO SUCH ROUTE'}"
+p "#6: #{s.total_routes_between('C','C',3) == 2}"
+p "#7: #{s.total_routes_between('A','C',4,4) == 3}"
+p "#8: #{s.shortest_distance_between('A','C') == 9}"
+p "#9: #{s.shortest_distance_between('B','B') == 9}"
+p "#10: #{s.total_routes_by_limit_distance('C','C',30) == 7}"
