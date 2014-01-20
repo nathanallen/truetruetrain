@@ -43,8 +43,8 @@ class DirectoryModel
     lookup.count
   end
 
-  def self.connections_from(stop)
-    lookup[stop].connections.keys
+  def self.connections_from(station_name)
+    lookup[station_name].connection_names
   end
 
 end
@@ -91,7 +91,7 @@ class DirectorySearchHelper
 
   def find_routes(seed_station, destination, *opts)
     limits = set_limits(*opts)
-    seed_connections = seed_station.connections.values
+    seed_connections = seed_station.connection_names
     seed_connections.map do |connection|
       route = Route.new(connection)
       depth_first_search(route, destination, *limits)
@@ -99,7 +99,7 @@ class DirectorySearchHelper
   end
 
   def depth_first_search(route, final_destination, *limits)
-    connections = DirectoryModel.lookup[route.terminus].connections.values
+    connections = DirectoryModel.connections_from(route.terminus)
     connections.map do |next_connection|
       new_fork = route.new_fork!(next_connection)
       evaluate_result(new_fork, final_destination, *limits)
@@ -162,6 +162,10 @@ class Station
 
   def distance_to(station_name)
     connections[station_name].distance
+  end
+
+  def connection_names
+    connections.values
   end
 
 end
