@@ -99,7 +99,6 @@ class DirectorySearchHelper
   end
 
   def depth_first_search(route, final_destination, max, min)
-    #p route
     route.future_connections.values.map do |next_connection|
       new_fork = route.new_fork!(next_connection)
       evaluate_route(new_fork, final_destination, max, min)
@@ -136,18 +135,8 @@ class DirectorySearchHelper
   end
 
   def set_limits(*opts)
-    case opts.length
-    when 2
-      max = opts[0] + 1
-      min = opts[1] + 1
-    when 1
-      max = opts[0] + 1
-      min = 0
-    when 0
-      max = DirectoryModel.number_of_stations + 1
-      min = 0
-    end
-
+    max = opts[0] || DirectoryModel.number_of_stations + 1
+    min = opts[1] || 0
     [max, min]
   end
 
