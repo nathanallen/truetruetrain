@@ -6,8 +6,8 @@ class DirectoryControl
 
   @@stations = {}
 
-  def initialize(graph)
-    load_graph(graph)
+  def initialize(graph_strings)
+    load_graph(graph_strings)
   end
   
   def update_directory(origin_name, destination_name, distance)
@@ -22,9 +22,9 @@ class DirectoryControl
 
   private
 
-  def load_graph(graph)
-    graph.each do |route|
-      update_directory(route[0], route[1], route[2].to_i) #
+  def load_graph(graph_strings)
+    graph_strings.each do |route_string|
+      update_directory(route_string[0], route_string[1], route_string[2].to_i)
     end
   end
 
