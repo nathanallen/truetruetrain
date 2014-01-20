@@ -9,19 +9,20 @@ class DirectoryModel
   end
 
   def self.lookup
-    @lookup ||= Hash.new("NO SUCH ROUTE")
+    @lookup ||= {}
   end
   
   def self.load(origin, destination, distance)
-    unless lookup[origin] == lookup.default
-      lookup[origin][destination] = distance
+    connection = Connection.new(origin, destination, distance)
+    if lookup[origin]
+      lookup[origin].add_connection(connection)
     else
-      lookup[origin] = Station.new(origin, destination, distance)
+      lookup[origin] = Station.new(origin, connection)
     end
   end
 
   def self.distance_between(station, next_station)
-    lookup[station][next_station].distance
+    lookup[station].distance_to(next_station)
     rescue
       "NO SUCH ROUTE" 
   end
@@ -159,21 +160,22 @@ end
 class Station
   attr_accessor :connections, :station
 
-  def initialize(station, *connection)
+  def initialize(station, *connections)
     @station = station
-    @connections = {connection[0] => new_connection(*connection)} || {}
+    @connections = {}
+    add_connections(connections)
   end
 
-  def [](station)
-    connections[station]
+  def add_connections(connections)
+    connections.each{|c| add_connection(c)}
   end
 
-  def []=(station, distance)
-    connections[station] = new_connection(station, distance)
+  def add_connection(connection)
+    connections[connection.destination] = connection
   end
 
-  def new_connection(destination, distance)
-    Connection.new(self.station, destination, distance)
+  def distance_to(station)
+    connections[station].distance
   end
 
 end
