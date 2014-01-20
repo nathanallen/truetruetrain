@@ -16,9 +16,7 @@ class DirectoryModel
     unless lookup[origin] == lookup.default
       lookup[origin][destination] = distance
     else
-      new_hash = Hash.new("NO SUCH ROUTE")
-      new_hash[destination] = distance
-      lookup[origin] = new_hash
+      lookup[origin] = Station.new(origin, destination, distance)
     end
   end
 
@@ -43,7 +41,7 @@ class DirectoryModel
   end
 
   def self.connections_from(stop)
-    lookup[stop].keys
+    lookup[stop].connections.keys
   end
 
 end
@@ -141,6 +139,24 @@ class DirectorySearchHelper
     end
 
     [max, min]
+  end
+
+end
+
+class Station
+  attr_accessor :connections
+
+  def initialize(station, *connection)
+    @station = station
+    @connections = {connection[0] => connection[1]} || {}
+  end
+
+  def [](station)
+    connections[station]
+  end
+
+  def []=(station, distance)
+    connections[station] = distance
   end
 
 end
