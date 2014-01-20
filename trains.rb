@@ -11,12 +11,11 @@ class DirectoryControl
   end
   
   def update_directory(origin_name, destination_name, distance)
-    connection = Connection.new(origin_name, destination_name, distance)
-    station = @@stations[origin_name]
-    if station
-      station.add_connection(connection)
+    new_connection = Connection.new(origin_name, destination_name, distance)
+    if @@stations[origin_name]
+      @@stations[origin_name].add_connection(new_connection)
     else
-      @@stations[origin_name] = Station.new(origin_name, connection)
+      @@stations[origin_name] = Station.new(origin_name, new_connection)
     end
   end
 
