@@ -117,7 +117,7 @@ class DirectorySearchHelper
   end
 
   def find_all_recombinations(routes, limit)
-    unique_routes = Set.new(routes.map{|route| route.connections.map{|c| c.origin + c.destination}})
+    unique_routes = Set.new(routes.map{|route| route.connections})
     routes.each do |left_side|
       routes.each do |right_side|
         combo_route = evaluate_combo(left_side, right_side, limit, unique_routes)
@@ -129,8 +129,8 @@ class DirectorySearchHelper
   def evaluate_combo(left_side, right_side, limit, unique_routes)
     total_dist = left_side.distance + right_side.distance
     if total_dist < limit
-      new_route = Route.new_splice(left_side, right_side)
-      new_route if unique_routes.add?(new_route.connections.map{|c| c.origin + c.destination})
+      new_route = left_side.new_fork!(right_side.connections)
+      new_route if unique_routes.add?(new_route.connections)
     end
   end
 
@@ -205,17 +205,12 @@ class Route
     DirectoryModel.lookup[destination].connections.values #
   end
 
-  def new_fork!(next_connection)
-    self.class.new_fork(self, next_connection)
+  def new_fork!(next_connections)
+    self.class.new_fork(self, next_connections)
   end
 
-  def self.new_fork(route, next_connection)
-    new_connections = route.connections, next_connection
-    self.new(new_connections)
-  end
-
-  def self.new_splice(left_route, right_route) #check for valid route?
-    new_connections = left_route.connections, right_route.connections
+  def self.new_fork(route, next_connections)
+    new_connections = route.connections, next_connections
     self.new(new_connections)
   end
 
