@@ -90,24 +90,23 @@ class DirectorySearchHelper
   private
 
   def find_routes(seed_station, destination, *opts)
-    #seed_route = Route.new(seed_station)
-    connections = seed_station.connections.values
-    bounds = set_limits(*opts)
-    
+    limits = set_limits(*opts)
+    seed_connections = seed_station.connections.values
+    seed_connections.map do |connection|
+      route = Route.new(connection)
+      depth_first_search(route, destination, *limits)
+    end.flatten.compact
+  end
+
+  def depth_first_search(route, final_destination, *limits)
+    connections = DirectoryModel.lookup[route.terminus].connections.values
     connections.map do |next_connection|
-      route = Route.new(next_connection)
-      depth_first_search(route, destination, *bounds)
-    end.flatten.compact
-  end
-
-  def depth_first_search(route, final_destination, max, min)
-    route.future_connections.map do |next_connection|
       new_fork = route.new_fork!(next_connection)
-      evaluate_route(new_fork, final_destination, max, min)
-    end.flatten.compact
+      evaluate_result(new_fork, final_destination, *limits)
+    end
   end
 
-  def evaluate_route(route, final_destination, max, min)
+  def evaluate_result(route, final_destination, max, min)
     stops = route.stops    
     if route.destination == final_destination && stops >= min #
       route
@@ -177,12 +176,11 @@ class Station
 end
 
 class Route
-  attr_accessor :distance, :connections, :last_station
+  attr_accessor :distance, :connections
 
   def initialize(*connections)
     @connections = connections.flatten
     @distance = calculate_distance
-    #@last_station = terminal_station
   end
 
   def calculate_distance
@@ -190,19 +188,17 @@ class Route
   end
 
   def origin
-    connections.first ? connections.first.origin : last_station.station
+    connections.first.origin
   end
 
   def destination
-    connections.last ? connections.last.destination : last_station.station
+    connections.last.destination
   end
+
+  alias_method :terminus, :destination
 
   def stops
     @connections.count
-  end
-
-  def future_connections #connecting_stations
-    DirectoryModel.lookup[destination].connections.values #
   end
 
   def new_fork!(next_connections)
