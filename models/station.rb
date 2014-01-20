@@ -14,7 +14,7 @@ class Station
   end
 
   def self.connections_from(station_name)
-    find(station_name).connections
+     @@stations[station_name] ? @@stations[station_name].connections : "NO SUCH ROUTE"
   end
 
   def self.all
@@ -26,7 +26,7 @@ class Station
   end
 
   def distance_to(station_name)
-    connections_hash[station_name].distance
+    connections_hash[station_name] ? connections_hash[station_name].distance : "NO SUCH ROUTE"
   end
 
   def connection_names

@@ -30,19 +30,20 @@ class SearchController < Main
 
   def distance_between(station_name, next_station_name)
     Station.find(station_name).distance_to(next_station_name)
-    rescue
-      "NO SUCH ROUTE" 
   end
 
   def distance_along_route(*station_names)
-    distance = 0
+    output = 0
     for i in (0..station_names.length-2)
-      distance += distance_between(*station_names[i..i+1])
+      distance = distance_between(*station_names[i..i+1])
+      if distance.is_a? Numeric
+        output += distance
+      else
+        output = distance # "NO SUCH ROUTE"
+        break
+      end
     end
-    distance
-    
-    rescue TypeError
-      "NO SUCH ROUTE" 
+    output
   end
 
   private
