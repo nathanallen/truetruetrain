@@ -1,59 +1,56 @@
 require 'set'
 
-class DirectoryModel
+## Controller
+
+class DirectoryControl
+
+  @@stations = {}
 
   def initialize(graph)
-    graph.each do |route|
-      DirectoryModel.load(route[0], route[1], route[2].to_i) #
-    end
-  end
-
-  def self.lookup
-    @lookup ||= {}
+    load_graph(graph)
   end
   
-  def self.load(origin, destination, distance)
-    connection = Connection.new(origin, destination, distance)
-    if lookup[origin]
-      lookup[origin].add_connection(connection)
+  def update_directory(origin_name, destination_name, distance)
+    connection = Connection.new(origin_name, destination_name, distance)
+    station = lookup(origin_name)
+    if station
+      station.add_connection(connection)
     else
-      lookup[origin] = Station.new(origin, connection)
+      @@stations[origin_name] = Station.new(origin_name, connection)
     end
   end
 
-  def self.distance_between(station_name, next_station_name)
-    lookup[station_name].distance_to(next_station_name)
-    rescue
-      "NO SUCH ROUTE" 
-  end
+  private
 
-  def self.distance_along_route(*station_names)
-    distance = 0
-    stops = station_names.length-1
-    stops.times do |i|
-      distance += distance_between(*station_names[i..i+1])
+  def load_graph(graph)
+    graph.each do |route|
+      update_directory(route[0], route[1], route[2].to_i) #
     end
-    distance
-    
-    rescue TypeError
-      "NO SUCH ROUTE" 
   end
 
-  def self.number_of_stations
-    lookup.count
+end
+
+class DirectoryLookup < DirectoryControl
+
+  def lookup(station_name)
+    @@stations[station_name]
   end
 
-  def self.connections_from(station_name)
-    lookup[station_name].connection_names
+  def number_of_stations
+    @@stations.count
+  end
+
+  def connections_from(station_name)
+    lookup(station_name).connection_names
   end
 
 end
 
 
-class DirectorySearchHelper
+class DirectorySearch < DirectoryLookup
 
   def routes_between(origin, destination, *opts)
-    origin_station = DirectoryModel.lookup[origin]
+    origin_station = lookup(origin)
     find_routes(origin_station, destination, *opts)
   end
 
@@ -79,12 +76,22 @@ class DirectorySearchHelper
     routes_by_limit_distance(origin, destination, distance).count
   end
 
-  def distance_between(*args) #
-    DirectoryModel.distance_between(*args)
+  def distance_between(station_name, next_station_name)
+    lookup(station_name).distance_to(next_station_name)
+    rescue
+      "NO SUCH ROUTE" 
   end
 
-  def distance_along_route(*stops) #
-    DirectoryModel.distance_along_route(*stops) 
+  def distance_along_route(*station_names)
+    distance = 0
+    stops = station_names.length-1
+    stops.times do |i|
+      distance += distance_between(*station_names[i..i+1])
+    end
+    distance
+    
+    rescue TypeError
+      "NO SUCH ROUTE" 
   end
 
   private
@@ -92,6 +99,10 @@ class DirectorySearchHelper
   def find_routes(seed_station, destination, *opts)
     limits = set_limits(*opts)
     seed_connections = seed_station.connection_names
+    inititate_search(seed_connections, destination, *limits)
+  end
+
+  def inititate_search(seed_connections, destination, *limits)
     seed_connections.map do |connection|
       route = Route.new(connection)
       depth_first_search(route, destination, *limits)
@@ -99,7 +110,7 @@ class DirectorySearchHelper
   end
 
   def depth_first_search(route, final_destination, *limits)
-    connections = DirectoryModel.connections_from(route.terminus)
+    connections = connections_from(route.terminus)
     connections.map do |next_connection|
       new_fork = route.new_fork!(next_connection)
       evaluate_result(new_fork, final_destination, *limits)
@@ -134,14 +145,14 @@ class DirectorySearchHelper
   end
 
   def set_limits(*opts)
-    max = opts[0] || DirectoryModel.number_of_stations + 1
+    max = opts[0] || number_of_stations + 1
     min = opts[1] || 0
     [max, min]
   end
 
 end
 
-#Model
+## Model
 
 class Station
   attr_accessor :connections, :station_name
@@ -218,25 +229,20 @@ class Route
 
 end
 
-class Directory
-
-end
 
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
 test_input = File.read(test_file).split(', ')
+d = DirectorySearch.new(test_input)
 
-DirectoryModel.new(test_input)
-c = DirectorySearchHelper.new
-
-## sanity check
-p "#1: #{c.distance_along_route('A','B','C') == 9}"
-p "#2: #{c.distance_along_route('A','D') == 5}"
-p "#3: #{c.distance_along_route('A','D','C') == 13}"
-p "#4: #{c.distance_along_route('A','E','B','C','D') == 22}"
-p "#5: #{c.distance_along_route('A','E','D') == 'NO SUCH ROUTE'}"
-p "#6: #{c.total_routes_between('C','C',3) == 2}"
-p "#7: #{c.total_routes_between('A','C',4,4) == 3}"
-p "#8: #{c.shortest_distance_between('A','C') == 9}"
-p "#9: #{c.shortest_distance_between('B','B') == 9}"
-p "#10: #{c.total_routes_by_limit_distance('C','C',30) == 7}"
+## Sanity Check
+p "#1: #{d.distance_along_route('A','B','C') == 9}"
+p "#2: #{d.distance_along_route('A','D') == 5}"
+p "#3: #{d.distance_along_route('A','D','C') == 13}"
+p "#4: #{d.distance_along_route('A','E','B','C','D') == 22}"
+p "#5: #{d.distance_along_route('A','E','D') == 'NO SUCH ROUTE'}"
+p "#6: #{d.total_routes_between('C','C',3) == 2}"
+p "#7: #{d.total_routes_between('A','C',4,4) == 3}"
+p "#8: #{d.shortest_distance_between('A','C') == 9}"
+p "#9: #{d.shortest_distance_between('B','B') == 9}"
+p "#10: #{d.total_routes_by_limit_distance('C','C',30) == 7}"
