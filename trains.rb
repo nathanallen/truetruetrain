@@ -195,7 +195,7 @@ class Route
 
   def initialize(*connections)
     @connections = connections.flatten
-    @distance = total_distance
+    @distance ||= total_distance
   end
 
   def origin
@@ -224,11 +224,10 @@ class Route
   private
 
   def total_distance
-    connections.map{|c| c.distance }.inject(:+)
+    connections.inject(0){|memo,c| memo += c.distance}
   end
 
 end
-
 
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
