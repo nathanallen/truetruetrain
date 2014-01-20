@@ -12,7 +12,7 @@ class DirectoryControl
   
   def update_directory(origin_name, destination_name, distance)
     connection = Connection.new(origin_name, destination_name, distance)
-    station = lookup(origin_name)
+    station = @@stations[origin_name]
     if station
       station.add_connection(connection)
     else
@@ -30,24 +30,15 @@ class DirectoryControl
 
 end
 
-class DirectoryLookup < DirectoryControl
+class DirectorySearch < DirectoryControl
 
   def lookup(station_name)
     @@stations[station_name]
   end
 
-  def number_of_stations
-    @@stations.count
-  end
-
   def connections_from(station_name)
-    lookup(station_name).connection_names
+    lookup(station_name).connections
   end
-
-end
-
-
-class DirectorySearch < DirectoryLookup
 
   def routes_between(origin, destination, *opts)
     origin_station = lookup(origin)
@@ -94,11 +85,15 @@ class DirectorySearch < DirectoryLookup
       "NO SUCH ROUTE" 
   end
 
+  def number_of_stations 
+    @@stations.count
+  end
+
   private
 
   def find_routes(seed_station, destination, *opts)
     limits = set_limits(*opts)
-    seed_connections = seed_station.connection_names
+    seed_connections = seed_station.connections
     inititate_search(seed_connections, destination, *limits)
   end
 
@@ -155,11 +150,11 @@ end
 ## Model
 
 class Station
-  attr_accessor :connections, :station_name
+  attr_reader :connection_hash, :station_name
 
   def initialize(name, *connections)
     @station_name = name
-    @connections = {}
+    @connection_hash = {}
     add_connections(connections)
   end
 
@@ -168,15 +163,19 @@ class Station
   end
 
   def add_connection(connection)
-    connections[connection.destination] = connection
+    connection_hash[connection.destination] = connection
   end
 
   def distance_to(station_name)
-    connections[station_name].distance
+    connection_hash[station_name].distance
   end
 
   def connection_names
-    connections.values
+    connection_hash.keys
+  end
+
+  def connections
+    connection_hash.values
   end
 
 end
@@ -193,15 +192,11 @@ class Connection
 end
 
 class Route
-  attr_accessor :distance, :connections
+  attr_reader :distance, :connections
 
   def initialize(*connections)
     @connections = connections.flatten
-    @distance = calculate_distance
-  end
-
-  def calculate_distance
-    connections.map{|c| c.distance }.inject(:+)
+    @distance = total_distance
   end
 
   def origin
@@ -211,7 +206,7 @@ class Route
   def destination
     connections.last.destination
   end
-
+  
   alias_method :terminus, :destination
 
   def stops
@@ -225,6 +220,12 @@ class Route
   def self.new_fork(route, next_connections)
     new_connections = route.connections, next_connections
     self.new(new_connections)
+  end
+
+  private
+
+  def total_distance
+    connections.map{|c| c.distance }.inject(:+)
   end
 
 end
