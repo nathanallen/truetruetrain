@@ -21,17 +21,17 @@ class DirectoryModel
     end
   end
 
-  def self.distance_between(station, next_station)
-    lookup[station].distance_to(next_station)
+  def self.distance_between(station_name, next_station_name)
+    lookup[station_name].distance_to(next_station_name)
     rescue
       "NO SUCH ROUTE" 
   end
 
-  def self.distance_along_route(*stations)
+  def self.distance_along_route(*station_names)
     distance = 0
-    stops = stations.length-1
+    stops = station_names.length-1
     stops.times do |i|
-      distance += distance_between(*stations[i..i+1])
+      distance += distance_between(*station_names[i..i+1])
     end
     distance
     
@@ -141,22 +141,13 @@ class DirectorySearchHelper
 
 end
 
-class Connection
-  attr_reader :origin, :destination, :distance
-
-  def initialize(origin, destination, distance)
-    @origin = origin
-    @destination = destination
-    @distance = distance
-  end
-
-end
+#Model
 
 class Station
-  attr_accessor :connections, :station
+  attr_accessor :connections, :station_name
 
-  def initialize(station, *connections)
-    @station = station
+  def initialize(name, *connections)
+    @station_name = name
     @connections = {}
     add_connections(connections)
   end
@@ -169,8 +160,19 @@ class Station
     connections[connection.destination] = connection
   end
 
-  def distance_to(station)
-    connections[station].distance
+  def distance_to(station_name)
+    connections[station_name].distance
+  end
+
+end
+
+class Connection
+  attr_reader :origin, :destination, :distance
+
+  def initialize(origin, destination, distance)
+    @origin = origin
+    @destination = destination
+    @distance = distance
   end
 
 end
@@ -212,6 +214,9 @@ class Route
 
 end
 
+class Directory
+
+end
 
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
@@ -220,23 +225,14 @@ test_input = File.read(test_file).split(', ')
 DirectoryModel.new(test_input)
 c = DirectorySearchHelper.new
 
+## sanity check
 p "#1: #{c.distance_along_route('A','B','C') == 9}"
 p "#2: #{c.distance_along_route('A','D') == 5}"
 p "#3: #{c.distance_along_route('A','D','C') == 13}"
 p "#4: #{c.distance_along_route('A','E','B','C','D') == 22}"
 p "#5: #{c.distance_along_route('A','E','D') == 'NO SUCH ROUTE'}"
-
-# 6. The number of routes_be starting at C and ending at C with a maximum of 3 stops.  In the sample data below, there are two such trips: C-D-C (2 stops). and C-E-B-C (3 stops).
-# 7. The number of trips starting at A and ending at C with exactly 4 stops.  In the sample data below, there are three such trips: A to C (via B,C,D); A to C (via D,C,D); and A to C (via D,E,B).
 p "#6: #{c.total_routes_between('C','C',3) == 2}"
 p "#7: #{c.total_routes_between('A','C',4,4) == 3}"
-#p "ABCDC, ADCDC, ADEBC"
-
-# 8. The length of the shortest route (in terms of distance to travel) from A to C.
-# 9. The length of the shortest route (in terms of distance to travel) from B to B.
 p "#8: #{c.shortest_distance_between('A','C') == 9}"
 p "#9: #{c.shortest_distance_between('B','B') == 9}"
-
-# 10. The number of different routes from C to C with a distance of less than 30.  In the sample data, the trips are: CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC.
 p "#10: #{c.total_routes_by_limit_distance('C','C',30) == 7}"
-#p "CDC, CEBC, CEBCDC, CDCEBC, CDEBC, CEBCEBC, CEBCEBCEBC"
