@@ -62,19 +62,20 @@ class SearchController < Main
   end
 
   def evaluate_result(route, final_destination, max, min)
-    stops = route.total_stops    
-    if route.destination == final_destination && stops >= min
-      route
-    elsif stops < max
-      depth_first_search(route, final_destination, max, min)
-    end
+    stops = route.total_stops
+    return route if route.destination == final_destination && stops >= min
+    return depth_first_search(route, final_destination, max, min) if stops < max
   end
 
   def find_all_recombinations(routes, limit)
     unique_routes = Set.new(routes.map{|route| route.connections})
+    recombinatorial_search(routes, limit, unique_routes)
+  end
+
+  def recombinatorial_search(routes, *args)
     routes.each do |left_route|
       routes.each do |right_route|
-        combo_route = evaluate_combo(left_route, right_route, limit, unique_routes)
+        combo_route = evaluate_combo(left_route, right_route, *args)
         routes << combo_route if combo_route
       end
     end
