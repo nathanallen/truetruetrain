@@ -1,4 +1,4 @@
-class Route < Directory::Connection
+class Route < Connection
   attr_reader :connections
 
   def initialize(connections)

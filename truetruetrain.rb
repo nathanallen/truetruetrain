@@ -1,5 +1,6 @@
+require './modules/search'
 require './controllers/main'
-require './controllers/search'
+require './controllers/directory'
 require './models/station'
 require './models/connection'
 require './models/route'
@@ -7,9 +8,10 @@ require './models/route'
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
 test_input = File.read(test_file).split(', ')
-search_by = Directory::Search.new(test_input)
+search_by = Directory.new(test_input)
 
 ## Sanity Check
+## Expected Output:
 p "#1: #{search_by.distance_along_route('A','B','C') == 9}"
 p "#2: #{search_by.distance_along_route('A','D') == 5}"
 p "#3: #{search_by.distance_along_route('A','D','C') == 13}"

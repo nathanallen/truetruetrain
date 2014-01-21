@@ -1,10 +1,39 @@
-class BasicStation
+class StationDirectory
+
+  @@stations = {}
+
+  def initialize(name, *connections)
+    add_station
+  end
+
+  def self.find(station_name)
+    @@stations[station_name]
+  end
+
+  def self.connections_from(station_name)
+    station = @@stations[station_name]
+    station ? station.connections : "NO SUCH ROUTE"
+  end
+
+  def self.all
+    @@stations
+  end
+
+  private
+
+  def add_station
+    @@stations[self.station_name] = self
+  end
+end
+
+class Station < StationDirectory
   attr_reader :connections_hash, :station_name
   
   def initialize(name, *connections)
     @station_name = name
     @connections_hash = {}
     add_connections(connections)
+    super
   end
 
   def distance_to_connecting_station(station_name)
@@ -30,35 +59,4 @@ class BasicStation
     new_connections.each{|c| add_connection(c)}
   end
 
-end
-
-module Directory
-  class Station < BasicStation
-
-    @@stations = {}
-
-    def initialize(name, *connections)
-      super
-      add_station
-    end
-
-    def self.find(station_name)
-      @@stations[station_name]
-    end
-
-    def self.connections_from(station_name)
-      station = @@stations[station_name]
-      station ? station.connections : "NO SUCH ROUTE"
-    end
-
-    def self.all
-      @@stations
-    end
-
-    private
-
-    def add_station
-      @@stations[self.station_name] = self
-    end
-  end
 end
