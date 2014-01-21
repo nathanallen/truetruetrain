@@ -1,4 +1,4 @@
-class Route
+class Route < Connection
   attr_reader :connections
 
   def initialize(connections)
@@ -6,11 +6,11 @@ class Route
   end
 
   def origin
-    connections.first.origin
+    @origin ||= connections.first.origin
   end
 
   def destination
-    connections.last.destination
+    @destination ||= connections.last.destination
   end
 
   alias_method :terminus, :destination
