@@ -33,17 +33,9 @@ class SearchController < Main
   end
 
   def distance_along_route(*station_names)
-    output = 0
-    for i in (0..station_names.length-2)
-      distance = distance_between(*station_names[i..i+1])
-      if distance.is_a? Numeric
-        output += distance
-      else
-        output = distance # "NO SUCH ROUTE"
-        break
-      end
-    end
-    output
+    pairs = station_names.length-2
+    distances = (0..pairs).map{ |i| distance_between(*station_names[i..i+1]) }
+    distances.include?("NO SUCH ROUTE") ? "NO SUCH ROUTE" : distances.inject(:+)
   end
 
   private
