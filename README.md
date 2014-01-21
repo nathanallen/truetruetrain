@@ -1,9 +1,20 @@
 ##TrueTrueTrain
-TrueTrueTrain is a... It allows... . On the command line run:
+TrueTrueTrain is a ruby application that loads a graph describing a network of stations, connections and routes.
+
+As much as possible I have tried to follow Sandi Metz's rules of modularity, among them, trying to write single-responsibility methods of 5 lines or less. 
+
+An OO approach was used, classes include:
+* Station: An origin point or node. Stations contain their Connections, and can be queried for connecting information. 
+* Connection: A line between two Stations, and its distance.
+* Route: A series of Connections.
+
+The test input, and expected output, provided with the challenge were used as the basis for some simple tests.
+
+To run the program, on the command line run:
 ```
-ruby train.rb [test_input.txt]
+ruby trains.rb [test_input.txt]
 ```
-If you do not supply input data via text file, it will default to test_input.txt.
+Optionally, you may supply your own test input file (by default it will load test_input.txt).
 
 
 

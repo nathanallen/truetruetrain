@@ -7,7 +7,7 @@ require './models/route'
 ## Driver Code
 test_file = ARGV[0] || 'test_input.txt'
 test_input = File.read(test_file).split(', ')
-search_by = SearchController.new(test_input)
+search_by = Directory::Search.new(test_input)
 
 ## Sanity Check
 p "#1: #{search_by.distance_along_route('A','B','C') == 9}"

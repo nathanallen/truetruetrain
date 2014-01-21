@@ -5,9 +5,9 @@ class Main
   end
   
   def build_stations(origin_name, destination_name, distance)
-    new_connection = Connection.new(origin_name, destination_name, distance)
-    station = Station.find(origin_name)
-    station ? station.add_connection(new_connection) : Station.new(origin_name, new_connection)
+    new_connection = Directory::Connection.new(origin_name, destination_name, distance)
+    station = Directory::Station.find(origin_name)
+    station ? station.add_connection(new_connection) : Directory::Station.new(origin_name, new_connection)
   end
 
   private
