@@ -1,5 +1,5 @@
 ##TrueTrueTrain
-TrueTrueTrain is a ruby application that loads a graph describing a network of stations, connections and routes. Various queries can then be performed against the data. 
+TrueTrueTrain is a ruby application that loads a graph describing a network of stations, connections and routes. Various queries can then be performed against the data to find information about the routes, for instance: the distance along a certain route, the number of different routes between two towns, the shortest route between two towns.
 
 As much as possible I have tried to follow Sandi Metz's rules of modularity, among them, trying to write single-responsibility methods of 5 lines or less.
 
@@ -21,10 +21,6 @@ Given more time I would like to focus on the high-level organization of the code
 
 
 ###Problem Description: Trains
- 
-Problem:  The local commuter railroad services a number of towns in Kiwiland.  Because of monetary concerns, all of the tracks are 'one-way.'  That is, a route from Kaitaia to Invercargill does not imply the existence of a route from Invercargill to Kaitaia.  In fact, even if both of these routes do happen to exist, they are distinct and are not necessarily the same distance!
- 
-The purpose of this problem is to help the railroad provide its customers with information about the routes.  In particular, you will compute the distance along a certain route, the number of different routes between two towns, and the shortest route between two towns.
  
 Input:  A directed graph where a node represents a town and an edge represents a route between two towns.  The weighting of the edge represents the distance between the two towns.  A given route will never appear more than once, and for a given route, the starting and ending town will not be the same town.
  
